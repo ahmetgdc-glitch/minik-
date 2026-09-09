@@ -140,7 +140,7 @@ const T = {
     subtitle:"Ein Bild. Ein kleiner Schritt. In deinem Tempo.",
     chooseTitle:"Wähle eine Übung",
     listenTitle:"Hören & finden", listenDesc:"Hör zu und tippe auf das passende Bild.",
-    nameTitle:"Schauen & benennen", nameDesc:"Entdecke Tiere und Alltagsdinge.",
+    nameTitle:"Schauen & benennen", nameDesc:"Entdecke Tiere, Essen, Fahrzeuge, Farben und Körperteile.",
     matchTitle:"Bilder zuordnen", matchDesc:"Welche Bilder sind gleich?",
     listenPrompt:"Hör gut zu: Wo ist",
     namePrompt:"Tippe auf",
@@ -159,7 +159,7 @@ const T = {
     subtitle:"Bir resim. Küçük bir adım. Kendi hızında.",
     chooseTitle:"Bir etkinlik seç",
     listenTitle:"Dinle ve bul", listenDesc:"Dinle ve doğru resme dokun.",
-    nameTitle:"Bak ve tanı", nameDesc:"Hayvanları ve günlük nesneleri keşfet.",
+    nameTitle:"Bak ve tanı", nameDesc:"Hayvanları, yiyecekleri, araçları, renkleri ve vücut bölümlerini keşfet.",
     matchTitle:"Eşleştir", matchDesc:"Hangi resimler aynı?",
     listenPrompt:"İyi dinle: Hangisi",
     namePrompt:"Dokun:",
@@ -182,19 +182,50 @@ const ITEMS = [
   {id:"fish",cat:"animals",emoji:"🐟",de:"Fisch",tr:"Balık"},
   {id:"lion",cat:"animals",emoji:"🦁",de:"Löwe",tr:"Aslan"},
   {id:"rabbit",cat:"animals",emoji:"🐰",de:"Hase",tr:"Tavşan"},
+  {id:"cow",cat:"animals",emoji:"🐮",de:"Kuh",tr:"İnek"},
+  {id:"horse",cat:"animals",emoji:"🐴",de:"Pferd",tr:"At"},
+  {id:"frog",cat:"animals",emoji:"🐸",de:"Frosch",tr:"Kurbağa"},
+  {id:"bear",cat:"animals",emoji:"🐻",de:"Bär",tr:"Ayı"},
   {id:"apple",cat:"food",emoji:"🍎",de:"Apfel",tr:"Elma"},
   {id:"banana",cat:"food",emoji:"🍌",de:"Banane",tr:"Muz"},
   {id:"bread",cat:"food",emoji:"🍞",de:"Brot",tr:"Ekmek"},
   {id:"milk",cat:"food",emoji:"🥛",de:"Milch",tr:"Süt"},
+  {id:"pear",cat:"food",emoji:"🍐",de:"Birne",tr:"Armut"},
+  {id:"strawberry",cat:"food",emoji:"🍓",de:"Erdbeere",tr:"Çilek"},
+  {id:"carrot",cat:"food",emoji:"🥕",de:"Karotte",tr:"Havuç"},
+  {id:"cheese",cat:"food",emoji:"🧀",de:"Käse",tr:"Peynir"},
+  {id:"egg",cat:"food",emoji:"🥚",de:"Ei",tr:"Yumurta"},
   {id:"car",cat:"vehicles",emoji:"🚗",de:"Auto",tr:"Araba"},
   {id:"bus",cat:"vehicles",emoji:"🚌",de:"Bus",tr:"Otobüs"},
   {id:"train",cat:"vehicles",emoji:"🚆",de:"Zug",tr:"Tren"},
+  {id:"bike",cat:"vehicles",emoji:"🚲",de:"Fahrrad",tr:"Bisiklet"},
+  {id:"plane",cat:"vehicles",emoji:"✈️",de:"Flugzeug",tr:"Uçak"},
+  {id:"ship",cat:"vehicles",emoji:"🚢",de:"Schiff",tr:"Gemi"},
+  {id:"tractor",cat:"vehicles",emoji:"🚜",de:"Traktor",tr:"Traktör"},
   {id:"ball",cat:"things",emoji:"⚽️",de:"Ball",tr:"Top"},
   {id:"book",cat:"things",emoji:"📘",de:"Buch",tr:"Kitap"},
   {id:"shoe",cat:"things",emoji:"👟",de:"Schuh",tr:"Ayakkabı"},
   {id:"house",cat:"things",emoji:"🏠",de:"Haus",tr:"Ev"},
-  {id:"sun",cat:"nature",emoji:"☀️",de:"Sonne",tr:"Güneş"}
+  {id:"sun",cat:"nature",emoji:"☀️",de:"Sonne",tr:"Güneş"},
+  {id:"red",cat:"colors",emoji:"🔴",de:"Rot",tr:"Kırmızı"},
+  {id:"blue",cat:"colors",emoji:"🔵",de:"Blau",tr:"Mavi"},
+  {id:"green",cat:"colors",emoji:"🟢",de:"Grün",tr:"Yeşil"},
+  {id:"yellow",cat:"colors",emoji:"🟡",de:"Gelb",tr:"Sarı"},
+  {id:"orange",cat:"colors",emoji:"🟠",de:"Orange",tr:"Turuncu"},
+  {id:"purple",cat:"colors",emoji:"🟣",de:"Lila",tr:"Mor"},
+  {id:"eyes",cat:"body",emoji:"👀",de:"Augen",tr:"Gözler"},
+  {id:"nose",cat:"body",emoji:"👃",de:"Nase",tr:"Burun"},
+  {id:"mouth",cat:"body",emoji:"👄",de:"Mund",tr:"Ağız"},
+  {id:"ear",cat:"body",emoji:"👂",de:"Ohr",tr:"Kulak"},
+  {id:"hand",cat:"body",emoji:"✋",de:"Hand",tr:"El"},
+  {id:"foot",cat:"body",emoji:"🦶",de:"Fuß",tr:"Ayak"}
 ];
+
+const SPEAK_COOLDOWN_MS = 450;
+const TAP_COOLDOWN_MS = 250;
+const NEXT_ROUND_DELAY_MS = 1100;
+const RETRY_UNLOCK_DELAY_MS = 700;
+const AUTO_SPEAK_DELAY_MS = 180;
 
 let state = {
   lang: localStorage.getItem("minik.lang") || "de",
@@ -205,7 +236,8 @@ let state = {
   target:null,
   choices:[],
   locked:false,
-  lastTarget:null
+  lastTarget:null,
+  taps:{}
 };
 
 function tx(k){ return T[state.lang][k] || k; }
@@ -218,8 +250,25 @@ function save(){
 }
 function shuffle(a){ return [...a].sort(()=>Math.random()-.5); }
 
+const speechState = { token:0, lastAt:0, fallbackTimer:null };
+
+function clearSpeechFallback(){
+  if(speechState.fallbackTimer){
+    clearTimeout(speechState.fallbackTimer);
+    speechState.fallbackTimer=null;
+  }
+}
 function stopSpeech(){
+  clearSpeechFallback();
+  speechState.token+=1;
   if("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+function tapLocked(key,delay){
+  const now=Date.now();
+  const last=state.taps[key]||0;
+  if(now-last<delay) return true;
+  state.taps[key]=now;
+  return false;
 }
 function bestVoice(lang){
   if(!("speechSynthesis" in window)) return null;
@@ -238,18 +287,35 @@ function bestVoice(lang){
   }).sort((a,b)=>b.s-a.s);
   return scored[0]?.v || matches[0] || null;
 }
-function speak(text){
+function speak(text,options={}){
   if(!state.sound || !text || !("speechSynthesis" in window)) return;
+  const {force=false}=options;
+  const now=Date.now();
+  if(!force && now-speechState.lastAt<SPEAK_COOLDOWN_MS) return;
   stopSpeech();
+  speechState.lastAt=now;
+  const token=speechState.token;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = state.lang==="tr" ? "tr-TR":"de-DE";
   const v=bestVoice(state.lang); if(v) u.voice=v;
   u.rate = .88;
   u.pitch = 1.0;
   u.volume = 1.0;
+  u.onend=()=>{ if(token===speechState.token) clearSpeechFallback(); };
+  u.onerror=()=>{ if(token===speechState.token) clearSpeechFallback(); };
+  speechState.fallbackTimer=setTimeout(()=>{
+    if(token===speechState.token) clearSpeechFallback();
+  },Math.max(900,text.length*140));
   speechSynthesis.speak(u);
 }
-speechSynthesis?.addEventListener?.("voiceschanged",()=>{});
+window.speechSynthesis?.addEventListener?.("voiceschanged",()=>{});
+
+function successSpeech(item){
+  return `${tx("yes")} ${itemLabel(item)}`;
+}
+function failureSpeech(){
+  return tx("no");
+}
 
 function newRound(){
   stopSpeech();
@@ -261,8 +327,8 @@ function newRound(){
   state.choices=shuffle([target,...others]);
   renderTask();
   setTimeout(()=> {
-    if(state.mode==="listen") speak(itemLabel(target));
-  },180);
+    if(state.mode==="listen") speak(itemLabel(target),{force:true});
+  },AUTO_SPEAK_DELAY_MS);
 }
 
 function renderTask(){
@@ -287,27 +353,26 @@ function renderTask(){
 }
 
 function choose(it,button){
-  if(state.locked) return;
+  if(state.locked || tapLocked("choice",TAP_COOLDOWN_MS)) return;
   state.locked=true;
   const ok=it.id===state.target.id;
   const status=document.getElementById("status");
   if(ok){
     button.classList.add("good");
-    status.textContent=tx("yes")+" "+itemLabel(state.target);
-    speak(tx("yes")+" "+itemLabel(state.target));
+    status.textContent=successSpeech(state.target);
+    speak(successSpeech(state.target),{force:true});
     state.rounds++; save();
     document.getElementById("progress").style.width=((state.rounds%10)*10)+"%";
-    setTimeout(newRound,1100);
+    setTimeout(newRound,NEXT_ROUND_DELAY_MS);
   }else{
     button.classList.add("bad");
     status.textContent=tx("no");
-    // IMPORTANT: Turkish wrong-answer feedback is exactly "Hayır".
-    speak(tx("no"));
+    speak(failureSpeech(),{force:true});
     setTimeout(()=>{
       button.classList.remove("bad");
       state.locked=false;
       status.textContent="";
-    },700);
+    },RETRY_UNLOCK_DELAY_MS);
   }
 }
 
@@ -348,9 +413,8 @@ document.getElementById("soundBtn").onclick=()=>{
   state.sound=!state.sound; if(!state.sound) stopSpeech(); save(); applyText();
 };
 document.getElementById("speakBtn").onclick=()=>{
-  if(!state.target) return;
-  if(state.mode==="listen") speak(itemLabel(state.target));
-  else speak(itemLabel(state.target));
+  if(!state.target || tapLocked("repeat",SPEAK_COOLDOWN_MS)) return;
+  speak(itemLabel(state.target),{force:true});
 };
 const modal=document.getElementById("parentModal");
 document.getElementById("parentBtn").onclick=()=>modal.classList.add("show");
