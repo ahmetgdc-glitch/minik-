@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff9f3">
+<title>MINIK · Gemeinsam lernen</title>
+<style>
+:root{
+  --bg:#fff9f3;
+  --card:#ffffff;
+  --ink:#24313a;
+  --muted:#6c7a82;
+  --accent:#f0a66b;
+  --accent2:#88b7a8;
+  --soft:#f7eadf;
+  --ok:#5fa47b;
+  --line:#eadfd6;
+  --shadow:0 10px 28px rgba(41,31,24,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:980px;margin:auto;padding:16px 16px 90px}
+.topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(255,249,243,.94);backdrop-filter:blur(12px);z-index:5;padding:10px 0}
+.brand{font-size:27px;font-weight:900;letter-spacing:-.8px;margin-right:auto}
+.pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 13px;font-weight:800;box-shadow:0 2px 7px #00000008}
+.hero{padding:24px 4px 12px}
+.hero h1{font-size:34px;line-height:1.08;margin:0 0 10px;letter-spacing:-1px}
+.hero p{color:var(--muted);font-size:18px;margin:0}
+.section-title{font-size:20px;font-weight:900;margin:26px 2px 12px}
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.mode{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:18px;text-align:left;min-height:145px;box-shadow:var(--shadow)}
+.mode.active{outline:3px solid #f0a66b55;border-color:var(--accent)}
+.mode .icon{font-size:34px}
+.mode strong{display:block;font-size:18px;margin:10px 0 6px}
+.mode span{color:var(--muted);font-size:14px}
+.panel{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:var(--shadow)}
+.taskbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.prompt{font-size:25px;font-weight:900;flex:1;min-width:220px}
+.speak{border:0;background:var(--soft);border-radius:16px;padding:12px 16px;font-weight:900}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.card{min-height:150px;border:2px solid var(--line);border-radius:22px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:.12s transform,.12s border-color,.12s background}
+.card:active{transform:scale(.97)}
+.card.good{border-color:var(--ok);background:#eef9f2}
+.card.bad{border-color:#e9c4bd;background:#fff6f4}
+.emoji{font-size:66px;line-height:1}
+.label{font-size:18px;font-weight:900;text-align:center}
+.status{min-height:34px;margin-top:14px;font-size:18px;font-weight:900;text-align:center}
+.progress-wrap{margin-top:14px;height:10px;background:#f0ebe6;border-radius:99px;overflow:hidden}
+.progress{height:100%;width:0;background:var(--accent2);transition:.2s width}
+.footer-note{color:var(--muted);text-align:center;margin:24px 10px;font-size:14px}
+.modal{display:none;position:fixed;inset:0;background:#0005;z-index:20;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.sheet{background:#fff;width:min(720px,100%);border-radius:26px 26px 0 0;padding:20px;max-height:85vh;overflow:auto}
+.sheet h2{margin:0 0 16px}
+.row{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.row label{font-weight:850}
+.row small{display:block;color:var(--muted);font-weight:500;margin-top:3px}
+select,.toggleBtn{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff;font-weight:800}
+.primary{width:100%;margin-top:18px;border:0;background:var(--accent);color:#3c2b20;border-radius:16px;padding:14px;font-weight:900}
+.hidden{display:none!important}
+@media(max-width:700px){
+  .mode-grid{grid-template-columns:1fr}
+  .mode{min-height:auto}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .card{min-height:140px}
+  .hero h1{font-size:30px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">minik.</div>
+    <button class="pill" id="langBtn">DE</button>
+    <button class="pill" id="soundBtn">🔊</button>
+    <button class="pill" id="parentBtn">⚙️</button>
+  </div>
+
+  <section class="hero">
+    <h1 id="hello"></h1>
+    <p id="subtitle"></p>
+  </section>
+
+  <div class="section-title" id="chooseTitle"></div>
+  <div class="mode-grid">
+    <button class="mode active" data-mode="listen">
+      <div class="icon">👂</div><strong data-i18n="listenTitle"></strong><span data-i18n="listenDesc"></span>
+    </button>
+    <button class="mode" data-mode="name">
+      <div class="icon">👀</div><strong data-i18n="nameTitle"></strong><span data-i18n="nameDesc"></span>
+    </button>
+    <button class="mode" data-mode="match">
+      <div class="icon">🧩</div><strong data-i18n="matchTitle"></strong><span data-i18n="matchDesc"></span>
+    </button>
+  </div>
+
+  <section class="panel">
+    <div class="taskbar">
+      <div class="prompt" id="prompt"></div>
+      <button class="speak" id="speakBtn">🔊 <span id="againText"></span></button>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="status" id="status"></div>
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+  </section>
+
+  <div class="footer-note" id="footerNote"></div>
+</div>
+
+<div class="modal" id="parentModal">
+  <div class="sheet">
+    <h2 id="parentTitle"></h2>
+    <div class="row">
+      <div><label id="langLabel"></label><small id="langHelp"></small></div>
+      <select id="langSelect"><option value="de">Deutsch</option><option value="tr">Türkçe</option></select>
+    </div>
+    <div class="row">
+      <div><label id="soundLabel"></label><small id="soundHelp"></small></div>
+      <button class="toggleBtn" id="soundToggle"></button>
+    </div>
+    <div class="row">
+      <div><label id="countLabel"></label><small id="countHelp"></small></div>
+      <select id="countSelect"><option value="4">4</option><option value="6">6</option></select>
+    </div>
+    <div class="row">
+      <div><label id="resetLabel"></label><small id="resetHelp"></small></div>
+      <button class="toggleBtn" id="resetBtn">↻</button>
+    </div>
+    <button class="primary" id="closeParent"></button>
+  </div>
+</div>
+
+<script>
+const T = {
+  de:{
+    hello:"Hallo, schön, dass du da bist!",
+    subtitle:"Ein Bild. Ein kleiner Schritt. In deinem Tempo.",
+    chooseTitle:"Wähle eine Übung",
+    listenTitle:"Hören & finden", listenDesc:"Hör zu und tippe auf das passende Bild.",
+    nameTitle:"Schauen & benennen", nameDesc:"Entdecke Tiere und Alltagsdinge.",
+    matchTitle:"Bilder zuordnen", matchDesc:"Welche Bilder sind gleich?",
+    listenPrompt:"Hör gut zu: Wo ist",
+    namePrompt:"Tippe auf",
+    matchPrompt:"Finde das gleiche Bild:",
+    again:"Noch einmal",
+    yes:"Ja!", no:"Nein",
+    round:"Runde", footer:"Kein Countdown. Kein Müssen. Macht eine Pause, wann immer ihr möchtet.",
+    parent:"Für Eltern", language:"Sprache", languageHelp:"Sprache der App und der Stimme.",
+    sound:"Ton", soundHelp:"Sprachausgabe an- oder ausschalten.",
+    count:"Bilder pro Runde", countHelp:"Weniger Bilder können den Einstieg erleichtern.",
+    reset:"Fortschritt zurücksetzen", resetHelp:"Setzt die gespeicherten Übungsrunden auf null.",
+    close:"Fertig", on:"An", off:"Aus", resetDone:"Fortschritt zurückgesetzt."
+  },
+  tr:{
+    hello:"Merhaba, burada olman çok güzel!",
+    subtitle:"Bir resim. Küçük bir adım. Kendi hızında.",
+    chooseTitle:"Bir etkinlik seç",
+    listenTitle:"Dinle ve bul", listenDesc:"Dinle ve doğru resme dokun.",
+    nameTitle:"Bak ve tanı", nameDesc:"Hayvanları ve günlük nesneleri keşfet.",
+    matchTitle:"Eşleştir", matchDesc:"Hangi resimler aynı?",
+    listenPrompt:"İyi dinle: Hangisi",
+    namePrompt:"Dokun:",
+    matchPrompt:"Aynı resmi bul:",
+    again:"Tekrar dinle",
+    yes:"Evet!", no:"Hayır",
+    round:"Tur", footer:"Geri sayım yok. Zorlama yok. İstediğiniz zaman mola verebilirsiniz.",
+    parent:"Ebeveynler için", language:"Dil", languageHelp:"Uygulama ve konuşma dili.",
+    sound:"Ses", soundHelp:"Sesli anlatımı aç veya kapat.",
+    count:"Tur başına resim", countHelp:"Daha az resim başlangıcı kolaylaştırabilir.",
+    reset:"İlerlemeyi sıfırla", resetHelp:"Kaydedilen tur sayısını sıfırlar.",
+    close:"Tamam", on:"Açık", off:"Kapalı", resetDone:"İlerleme sıfırlandı."
+  }
+};
+
+const ITEMS = [
+  {id:"cat",cat:"animals",emoji:"🐱",de:"Katze",tr:"Kedi"},
+  {id:"dog",cat:"animals",emoji:"🐶",de:"Hund",tr:"Köpek"},
+  {id:"bird",cat:"animals",emoji:"🐦",de:"Vogel",tr:"Kuş"},
+  {id:"fish",cat:"animals",emoji:"🐟",de:"Fisch",tr:"Balık"},
+  {id:"lion",cat:"animals",emoji:"🦁",de:"Löwe",tr:"Aslan"},
+  {id:"rabbit",cat:"animals",emoji:"🐰",de:"Hase",tr:"Tavşan"},
+  {id:"apple",cat:"food",emoji:"🍎",de:"Apfel",tr:"Elma"},
+  {id:"banana",cat:"food",emoji:"🍌",de:"Banane",tr:"Muz"},
+  {id:"bread",cat:"food",emoji:"🍞",de:"Brot",tr:"Ekmek"},
+  {id:"milk",cat:"food",emoji:"🥛",de:"Milch",tr:"Süt"},
+  {id:"car",cat:"vehicles",emoji:"🚗",de:"Auto",tr:"Araba"},
+  {id:"bus",cat:"vehicles",emoji:"🚌",de:"Bus",tr:"Otobüs"},
+  {id:"train",cat:"vehicles",emoji:"🚆",de:"Zug",tr:"Tren"},
+  {id:"ball",cat:"things",emoji:"⚽️",de:"Ball",tr:"Top"},
+  {id:"book",cat:"things",emoji:"📘",de:"Buch",tr:"Kitap"},
+  {id:"shoe",cat:"things",emoji:"👟",de:"Schuh",tr:"Ayakkabı"},
+  {id:"house",cat:"things",emoji:"🏠",de:"Haus",tr:"Ev"},
+  {id:"sun",cat:"nature",emoji:"☀️",de:"Sonne",tr:"Güneş"}
+];
+
+let state = {
+  lang: localStorage.getItem("minik.lang") || "de",
+  sound: localStorage.getItem("minik.sound") !== "0",
+  count: Number(localStorage.getItem("minik.count") || 6),
+  rounds: Number(localStorage.getItem("minik.rounds") || 0),
+  mode:"listen",
+  target:null,
+  choices:[],
+  locked:false,
+  lastTarget:null
+};
+
+function tx(k){ return T[state.lang][k] || k; }
+function itemLabel(item){ return item[state.lang]; }
+function save(){
+  localStorage.setItem("minik.lang",state.lang);
+  localStorage.setItem("minik.sound",state.sound ? "1":"0");
+  localStorage.setItem("minik.count",String(state.count));
+  localStorage.setItem("minik.rounds",String(state.rounds));
+}
+function shuffle(a){ return [...a].sort(()=>Math.random()-.5); }
+
+function stopSpeech(){
+  if("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+function bestVoice(lang){
+  if(!("speechSynthesis" in window)) return null;
+  const locale = lang==="tr" ? "tr-TR":"de-DE";
+  const base = lang==="tr" ? "tr":"de";
+  const vs = speechSynthesis.getVoices();
+  const matches = vs.filter(v => (v.lang||"").toLowerCase().startsWith(base));
+  // Prefer Apple/Siri/Premium/Enhanced/Google voices when the platform exposes them.
+  const scored = matches.map(v=>{
+    const n=(v.name||"").toLowerCase();
+    let s=0;
+    if((v.lang||"").toLowerCase()===locale.toLowerCase()) s+=10;
+    if(/siri|premium|enhanced|natural|google|microsoft/.test(n)) s+=8;
+    if(v.localService) s+=2;
+    return {v,s};
+  }).sort((a,b)=>b.s-a.s);
+  return scored[0]?.v || matches[0] || null;
+}
+function speak(text){
+  if(!state.sound || !text || !("speechSynthesis" in window)) return;
+  stopSpeech();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = state.lang==="tr" ? "tr-TR":"de-DE";
+  const v=bestVoice(state.lang); if(v) u.voice=v;
+  u.rate = .88;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+  speechSynthesis.speak(u);
+}
+speechSynthesis?.addEventListener?.("voiceschanged",()=>{});
+
+function newRound(){
+  stopSpeech();
+  state.locked=false;
+  let pool=ITEMS.filter(x=>x.id!==state.lastTarget);
+  const target=shuffle(pool)[0];
+  state.target=target; state.lastTarget=target.id;
+  const others=shuffle(ITEMS.filter(x=>x.id!==target.id)).slice(0,state.count-1);
+  state.choices=shuffle([target,...others]);
+  renderTask();
+  setTimeout(()=> {
+    if(state.mode==="listen") speak(itemLabel(target));
+  },180);
+}
+
+function renderTask(){
+  const target=state.target;
+  const prompt=document.getElementById("prompt");
+  if(state.mode==="listen") prompt.textContent=tx("listenPrompt")+" …";
+  if(state.mode==="name") prompt.textContent=tx("namePrompt")+" "+itemLabel(target);
+  if(state.mode==="match") prompt.textContent=tx("matchPrompt")+" "+target.emoji;
+
+  const cards=document.getElementById("cards");
+  cards.innerHTML="";
+  state.choices.forEach(it=>{
+    const b=document.createElement("button");
+    b.className="card";
+    b.dataset.id=it.id;
+    b.innerHTML=`<div class="emoji">${it.emoji}</div><div class="label">${state.mode==="listen" ? "" : itemLabel(it)}</div>`;
+    b.onclick=()=>choose(it,b);
+    cards.appendChild(b);
+  });
+  document.getElementById("status").textContent="";
+  document.getElementById("progress").style.width=((state.rounds%10)*10)+"%";
+}
+
+function choose(it,button){
+  if(state.locked) return;
+  state.locked=true;
+  const ok=it.id===state.target.id;
+  const status=document.getElementById("status");
+  if(ok){
+    button.classList.add("good");
+    status.textContent=tx("yes")+" "+itemLabel(state.target);
+    speak(tx("yes")+" "+itemLabel(state.target));
+    state.rounds++; save();
+    document.getElementById("progress").style.width=((state.rounds%10)*10)+"%";
+    setTimeout(newRound,1100);
+  }else{
+    button.classList.add("bad");
+    status.textContent=tx("no");
+    // IMPORTANT: Turkish wrong-answer feedback is exactly "Hayır".
+    speak(tx("no"));
+    setTimeout(()=>{
+      button.classList.remove("bad");
+      state.locked=false;
+      status.textContent="";
+    },700);
+  }
+}
+
+function applyText(){
+  document.documentElement.lang=state.lang;
+  document.getElementById("hello").textContent=tx("hello");
+  document.getElementById("subtitle").textContent=tx("subtitle");
+  document.getElementById("chooseTitle").textContent=tx("chooseTitle");
+  document.getElementById("againText").textContent=tx("again");
+  document.getElementById("footerNote").textContent=tx("footer");
+  document.getElementById("parentTitle").textContent=tx("parent");
+  document.getElementById("langLabel").textContent=tx("language");
+  document.getElementById("langHelp").textContent=tx("languageHelp");
+  document.getElementById("soundLabel").textContent=tx("sound");
+  document.getElementById("soundHelp").textContent=tx("soundHelp");
+  document.getElementById("countLabel").textContent=tx("count");
+  document.getElementById("countHelp").textContent=tx("countHelp");
+  document.getElementById("resetLabel").textContent=tx("reset");
+  document.getElementById("resetHelp").textContent=tx("resetHelp");
+  document.getElementById("closeParent").textContent=tx("close");
+  document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=tx(el.dataset.i18n));
+  document.getElementById("langBtn").textContent=state.lang==="de"?"DE":"TR";
+  document.getElementById("soundBtn").textContent=state.sound?"🔊":"🔇";
+  document.getElementById("langSelect").value=state.lang;
+  document.getElementById("countSelect").value=String(state.count);
+  document.getElementById("soundToggle").textContent=state.sound?tx("on"):tx("off");
+  if(state.target) renderTask();
+}
+
+document.querySelectorAll(".mode").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active"); state.mode=b.dataset.mode; newRound();
+});
+document.getElementById("langBtn").onclick=()=>{
+  state.lang=state.lang==="de"?"tr":"de"; save(); stopSpeech(); applyText(); newRound();
+};
+document.getElementById("soundBtn").onclick=()=>{
+  state.sound=!state.sound; if(!state.sound) stopSpeech(); save(); applyText();
+};
+document.getElementById("speakBtn").onclick=()=>{
+  if(!state.target) return;
+  if(state.mode==="listen") speak(itemLabel(state.target));
+  else speak(itemLabel(state.target));
+};
+const modal=document.getElementById("parentModal");
+document.getElementById("parentBtn").onclick=()=>modal.classList.add("show");
+document.getElementById("closeParent").onclick=()=>modal.classList.remove("show");
+modal.onclick=e=>{ if(e.target===modal) modal.classList.remove("show"); };
+document.getElementById("langSelect").onchange=e=>{
+  state.lang=e.target.value; save(); stopSpeech(); applyText(); newRound();
+};
+document.getElementById("soundToggle").onclick=()=>{
+  state.sound=!state.sound; if(!state.sound) stopSpeech(); save(); applyText();
+};
+document.getElementById("countSelect").onchange=e=>{
+  state.count=Number(e.target.value); save(); newRound();
+};
+document.getElementById("resetBtn").onclick=()=>{
+  state.rounds=0; save(); document.getElementById("status").textContent=tx("resetDone");
+  document.getElementById("progress").style.width="0";
+};
+
+applyText();
+newRound();
+</script>
+</body>
+</html>
