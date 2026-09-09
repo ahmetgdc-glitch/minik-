@@ -308,7 +308,7 @@ function speak(text,options={}){
   },Math.max(900,text.length*140));
   speechSynthesis.speak(u);
 }
-speechSynthesis?.addEventListener?.("voiceschanged",()=>{});
+window.speechSynthesis?.addEventListener?.("voiceschanged",()=>{});
 
 function successSpeech(item){
   return `${tx("yes")} ${itemLabel(item)}`;
