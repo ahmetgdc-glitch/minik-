@@ -1,0 +1,2 @@
+Minik-beta source: 33e89d5c168e2854c27a0ce6f28ccee3ad3d8900
+Voice update: native DE/TR pronunciation fallback + recorded home/drawing prompts
