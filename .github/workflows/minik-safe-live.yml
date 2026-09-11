@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,6 +18,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout safe mirror repository
+        uses: actions/checkout@v4
+        with:
+          path: mirror
+
       - name: Checkout current MINIK source
         uses: actions/checkout@v4
         with:
@@ -35,6 +40,12 @@ jobs:
       - name: Install
         working-directory: app
         run: npm ci --no-audit --no-fund
+
+      - name: Test current MINIK
+        working-directory: app
+        run: |
+          npm test
+          npm run preflight
 
       - name: Disable PWA registration on Safari-safe mirror
         working-directory: app
@@ -59,6 +70,38 @@ jobs:
       - name: Remove service worker from safe mirror
         working-directory: app
         run: rm -f dist/sw.js
+
+      - name: Publish identical build into branch fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mirror/live
+          mkdir -p mirror/live
+          cp -R app/dist/. mirror/live/
+          SOURCE_SHA="$(git -C app rev-parse HEAD)"
+          cat > mirror/index.html <<'HTML'
+          <!doctype html>
+          <html lang="de">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta http-equiv="refresh" content="0;url=./live/">
+            <title>MINIK</title>
+          </head>
+          <body>
+            <script>location.replace('./live/' + location.search + location.hash);</script>
+            <a href="./live/">MINIK öffnen</a>
+          </body>
+          </html>
+          HTML
+          printf 'Minik-beta source: %s\nSafari-safe mirror contains the exact production build in /live/.\n' "$SOURCE_SHA" > mirror/SOURCE_VERSION.txt
+          git -C mirror config user.name "github-actions[bot]"
+          git -C mirror config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C mirror add -A live index.html SOURCE_VERSION.txt
+          if ! git -C mirror diff --cached --quiet; then
+            git -C mirror commit -m "Publish exact MINIK build [skip ci]"
+            git -C mirror push origin HEAD:main
+          fi
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
