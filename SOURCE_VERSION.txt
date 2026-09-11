@@ -1,2 +1,2 @@
 Minik-beta source: c68592fe3c1a8f4495627dffabdd1a28e701cfca
-UI update: spill-proof automatic coloring + real draggable puzzles + enlarged matching playground
+Safari-safe mirror contains the exact production build in /live/.
